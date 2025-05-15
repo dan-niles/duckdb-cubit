@@ -1,0 +1,23 @@
+# name: test/sql/cubit.test
+# description: test cubit extension
+# group: [cubit]
+
+# Before we load the extension, this will fail
+statement error
+SELECT cubit('Sam');
+----
+Catalog Error: Scalar Function with name cubit does not exist!
+
+# Require statement will ensure this test is run with this extension loaded
+require cubit
+
+# Confirm the extension works
+query I
+SELECT cubit('Sam');
+----
+Cubit Sam 🐥
+
+query I
+SELECT cubit_openssl_version('Michael') ILIKE 'Cubit Michael, my linked OpenSSL version is OpenSSL%';
+----
+true
