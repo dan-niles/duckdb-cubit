@@ -16,13 +16,13 @@ void InitCubitTable() {
     auto config = new Table_config{};
 
     // Simulate command line options:
-    config->n_workers = 1;
-    config->DATA_PATH = "/home/danniles/cubit/data";
+    config->n_workers = 3;
     config->g_cardinality = 5;
+    config->DATA_PATH = "/home/danniles/cubit/data";
     config->INDEX_PATH = "/home/danniles/cubit/index";
-    config->n_rows = 10000;
-    config->n_udis = 1;
-    config->n_queries = 1;
+    config->n_rows = 100;
+    config->n_udis = 100;
+    config->n_queries = 100;
     config->verbose = false;
     config->enable_fence_pointer = false;
     config->enable_parallel_cnt = false;
@@ -68,29 +68,84 @@ std::string RunCubitQuery(const std::string &query) {
 
     std::ostringstream result;
 
-    if (cmd == "append") {
-        int bitmap_id, value;
-        ss >> bitmap_id >> value;
-        if (cubit_table->append(bitmap_id, value) == 0) {
-            result << "Append successful";
-        } else {
-            result << "Append failed";
-        }
-    } else if (cmd == "evaluate") {
-        int bitmap_id;
-        uint32_t value;
-        ss >> bitmap_id >> value;
-        int matches = cubit_table->evaluate(bitmap_id, value);
-        result << "Matches: " << matches;
-    } else if (cmd == "range") {
-        int bitmap_id;
-        uint32_t low, high;
-        ss >> bitmap_id >> low >> high;
-        int matches = cubit_table->range(bitmap_id, low, high);
-        result << "Range matches: " << matches;
-    } else {
-        result << "Unknown command: " << cmd;
-    }
+    int tid = 0; // Assuming single-threaded for simplicity
 
-    return result.str();
+	if (cmd == "append") {
+		int value;
+		ss >> value;
+		if (cubit_table->append(tid, value) == 0) {
+			result << "Append successful";
+		} else {
+			result << "Append failed";
+		}
+
+    } else if (cmd == "update") {
+        uint64_t rowID;
+        int value;
+        ss >> rowID >> value;
+        if (cubit_table->update(tid, rowID, value) == 0) {
+            result << "Update successful";
+        } else {
+            result << "Update failed";
+        }
+
+    } else if (cmd == "remove") {
+        uint64_t rowID;
+        ss >> rowID;
+        if (cubit_table->remove(tid, rowID) == 0) {
+            result << "Remove successful";
+        } else {
+            result << "Remove failed";
+        }
+
+	} else if (cmd == "evaluate") {
+		uint32_t value;
+		ss >> value;
+		int matches = cubit_table->evaluate(tid, value);
+		result << "Matches: " << matches;
+
+	} else if (cmd == "range") {
+		uint32_t low, high;
+		ss >> low >> high;
+		int matches = cubit_table->range(tid, low, high);
+		result << "Range matches: " << matches;
+
+    } else if (cmd == "printMemory") {
+        cubit_table->printMemory();
+        result << "Memory printed";
+
+    } else if (cmd == "printUncompMemory") {
+        cubit_table->printUncompMemory();
+        result << "Uncompressed memory printed";
+
+    } else if (cmd == "printMemorySeg") {
+        cubit_table->printMemorySeg();
+        result << "Segmented memory printed";
+
+    } else if (cmd == "printUncompMemorySeg") {
+        cubit_table->printUncompMemorySeg();
+        result << "Uncompressed segmented memory printed";
+
+    } else if (cmd == "get_g_timestamp") {
+        uint64_t timestamp = cubit_table->get_g_timestamp();
+        result << "Global timestamp: " << timestamp;
+
+    } else if (cmd == "get_g_number_of_rows") {
+        uint64_t rows = cubit_table->get_g_number_of_rows();
+        result << "Global number of rows: " << rows;
+    
+    } else if (cmd == "init") {
+        uint32_t tid, rowID, value;
+		ss >> tid >> rowID >> value;
+        if (cubit_table->__init_append(tid, rowID, value) == 0) {
+            result << "Initialization successful";
+        } else {
+            result << "Initialization failed";
+        }
+    
+	} else {
+		result << "Unknown command: " << cmd;
+	}
+
+	return result.str();
 }
