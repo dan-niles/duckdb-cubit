@@ -20,7 +20,7 @@ void InitCubitTable() {
     config->g_cardinality = 5;
     config->DATA_PATH = "/home/danniles/cubit/data";
     config->INDEX_PATH = "/home/danniles/cubit/index";
-    config->n_rows = 100;
+    config->n_rows = 1;
     config->n_udis = 100;
     config->n_queries = 100;
     config->verbose = false;
