@@ -935,6 +935,7 @@ int Cubit::evaluate(int tid, uint32_t val)
     else {
         assert(0);
     }
+    return -1;
 }
 
 void Cubit::_get_value(uint64_t row_id, int begin, int range, uint64_t l_timestamp,
