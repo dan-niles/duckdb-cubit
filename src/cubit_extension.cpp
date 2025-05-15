@@ -40,6 +40,7 @@ static void LoadInternal(DatabaseInstance &instance) {
 
 	// Register a query function
 	auto cubit_query_function = ScalarFunction("cubit_query", {LogicalType::VARCHAR}, LogicalType::VARCHAR, CubitQueryFunction);
+	ExtensionUtil::RegisterFunction(instance, cubit_query_function);
 }
 
 void CubitExtension::Load(DuckDB &db) {
