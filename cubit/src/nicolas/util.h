@@ -7,6 +7,8 @@
 #include <cmath>   // std::minus
 #include <boost/program_options.hpp>
 #include <vector>
+#include <atomic>
+#include <type_traits>
 
 // using namespace std;
 
@@ -49,23 +51,26 @@ int _CAS2(volatile long * ptr, long * cmp1, long * cmp2, long val1, long val2);
   _CAS2((volatile long *) p, (long *) o1, (long *) o2, (long) n1, (long) n2)
 
 /* Borrowed from perfbook */
-#define ACCESS_ONCE(x) (*(volatile typeof(x) *)&(x))
-#define READ_ONCE(x) \
-                ({ typeof(x) ___x = ACCESS_ONCE(x); ___x; })
-#define WRITE_ONCE(x, val) \
-                do { ACCESS_ONCE(x) = (val); } while (0)
-#define barrier() __asm__ __volatile__("": : :"memory")
+template <typename T>
+inline T ACCESS_ONCE(const T &x) {
+    return *(volatile const T *)&x;
+}
 
-#define cmpxchg(ptr, o, n) \
-({ \
-    typeof(*ptr) _____actual = (o); \
-    \
-    __atomic_compare_exchange_n((ptr), (void *)&_____actual, (n), 0, \
-            __ATOMIC_SEQ_CST, __ATOMIC_RELAXED); \
-    _____actual; \
-})
+#define READ_ONCE(x) ([&]() -> std::remove_reference_t<decltype(x)> { return ACCESS_ONCE(x); })()
 
+template <typename T>
+inline void WRITE_ONCE(T &x, T val) {
+    *(volatile T *)&x = val;
+}
 
+#define barrier() std::atomic_thread_fence(std::memory_order_seq_cst)
+
+template <typename T>
+inline T* cmpxchg(T** ptr, T* old_val, T* new_val) {
+    T* expected = old_val;
+    __atomic_compare_exchange_n(ptr, &expected, new_val, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    return expected;
+}
 /***********************************/
 
 enum Index_encoding {EE, RE, AE, IE};
