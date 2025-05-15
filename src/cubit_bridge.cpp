@@ -7,11 +7,9 @@
 #include "cubit/table_lf.h"
 using namespace cubit_lf;
 
-// Optionally make this static/global if you want to reuse it across calls
 static std::unique_ptr<cubit_lf::CubitLF> cubit_table;
 static std::once_flag init_flag;
 
-// Initialize only once for all DuckDB queries
 void InitCubitTable() {
     auto config = new Table_config{};
 
@@ -32,7 +30,7 @@ void InitCubitTable() {
     config->nThreads_for_getval = 4;          // Must be > 0
     config->time_out = 1000;
     config->n_range = 1;                       // Must be >= 1
-    config->range_algo = "default";
+    config->range_algo = "naive";
     config->showEB = false;
     config->decode = false;
     config->autoCommit = true;
@@ -58,7 +56,6 @@ void InitCubitTable() {
     // cubit_table->init_sequential_test();
 }
 
-// Simple parser for demo: "evaluate 0 123" → evaluate(bitmap_id=0, value=123)
 std::string RunCubitQuery(const std::string &query) {
     std::call_once(init_flag, InitCubitTable);
 
@@ -110,22 +107,6 @@ std::string RunCubitQuery(const std::string &query) {
 		int matches = cubit_table->range(tid, low, high);
 		result << "Range matches: " << matches;
 
-    } else if (cmd == "printMemory") {
-        cubit_table->printMemory();
-        result << "Memory printed";
-
-    } else if (cmd == "printUncompMemory") {
-        cubit_table->printUncompMemory();
-        result << "Uncompressed memory printed";
-
-    } else if (cmd == "printMemorySeg") {
-        cubit_table->printMemorySeg();
-        result << "Segmented memory printed";
-
-    } else if (cmd == "printUncompMemorySeg") {
-        cubit_table->printUncompMemorySeg();
-        result << "Uncompressed segmented memory printed";
-
     } else if (cmd == "get_g_timestamp") {
         uint64_t timestamp = cubit_table->get_g_timestamp();
         result << "Global timestamp: " << timestamp;
@@ -133,15 +114,6 @@ std::string RunCubitQuery(const std::string &query) {
     } else if (cmd == "get_g_number_of_rows") {
         uint64_t rows = cubit_table->get_g_number_of_rows();
         result << "Global number of rows: " << rows;
-    
-    } else if (cmd == "init") {
-        uint32_t tid, rowID, value;
-		ss >> tid >> rowID >> value;
-        if (cubit_table->__init_append(tid, rowID, value) == 0) {
-            result << "Initialization successful";
-        } else {
-            result << "Initialization failed";
-        }
     
 	} else {
 		result << "Unknown command: " << cmd;
