@@ -22,9 +22,9 @@
 #include "cubit/table_lf.h"
 #include "cubit/table_lk.h"
 
-#ifdef LINUX
+// #ifdef LINUX
 #include "nicolas/perf.h"
-#endif
+// #endif
 
 using namespace std;
 
@@ -494,95 +494,95 @@ void evaluateGetValue(Table_config *config) {
     cout << time_diff(before, after) << endl;
 }
 
-int main(const int argc, const char *argv[]) 
-{
-    po::variables_map options = get_options(argc, argv);
-    Table_config *config = new Table_config{};
-    init_config(config, options);
+// int main(const int argc, const char *argv[]) 
+// {
+//     po::variables_map options = get_options(argc, argv);
+//     Table_config *config = new Table_config{};
+//     init_config(config, options);
 
-    if (options.count("encoding-scheme")) {
-        string encoding = options["encoding-scheme"].as<string>();
-        if (encoding == "EE") config->encoding = EE;
-        else if (encoding == "RE") config->encoding = RE;
-        else if (encoding == "AE") config->encoding = AE;
-        else if (encoding == "IE") config->encoding = IE;
-        else {
-            cout << "Invalid encoding scheme: " << encoding << endl;
-            assert(0);
-        }
+//     if (options.count("encoding-scheme")) {
+//         string encoding = options["encoding-scheme"].as<string>();
+//         if (encoding == "EE") config->encoding = EE;
+//         else if (encoding == "RE") config->encoding = RE;
+//         else if (encoding == "AE") config->encoding = AE;
+//         else if (encoding == "IE") config->encoding = IE;
+//         else {
+//             cout << "Invalid encoding scheme: " << encoding << endl;
+//             assert(0);
+//         }
 
-        if (config->encoding == RE) {       // Range encoding
-            config->INDEX_PATH += "_RE";
-            cout << "Index path: " << config->INDEX_PATH << endl;
-        }
+//         if (config->encoding == RE) {       // Range encoding
+//             config->INDEX_PATH += "_RE";
+//             cout << "Index path: " << config->INDEX_PATH << endl;
+//         }
 
-        if (config->encoding == AE) {        // Anchor encoding
-            config->AE_left_margin = 2;
-            config->AE_right_margin = 2;
-            config->AE_interval = 3;
+//         if (config->encoding == AE) {        // Anchor encoding
+//             config->AE_left_margin = 2;
+//             config->AE_right_margin = 2;
+//             config->AE_interval = 3;
 
-            // To set anchors
-            int n_btvs = config->g_cardinality - 1;  // Each RE or AE has cardinality-1 bitvectors.
-            int AE_btvs = n_btvs - config->AE_left_margin - config->AE_right_margin;
-            if (AE_btvs >= config->AE_interval) {
-                config->encoding = AE;
-                config->INDEX_PATH += "_AE";
-                cout << "Index path: " << config->INDEX_PATH << endl;
-                for (int i = config->AE_right_margin; i < n_btvs - config->AE_left_margin; i += config->AE_interval) {
-                    config->AE_anchors[i] = i;
-                    for (int j = 1; j < config->AE_interval; j++) {
-                        if ((i+j) >= n_btvs - config->AE_left_margin) break;
-                        config->AE_curves[i+j] = i;  // The value field indicates the corresponding anchor.
-                    }
-                }
+//             // To set anchors
+//             int n_btvs = config->g_cardinality - 1;  // Each RE or AE has cardinality-1 bitvectors.
+//             int AE_btvs = n_btvs - config->AE_left_margin - config->AE_right_margin;
+//             if (AE_btvs >= config->AE_interval) {
+//                 config->encoding = AE;
+//                 config->INDEX_PATH += "_AE";
+//                 cout << "Index path: " << config->INDEX_PATH << endl;
+//                 for (int i = config->AE_right_margin; i < n_btvs - config->AE_left_margin; i += config->AE_interval) {
+//                     config->AE_anchors[i] = i;
+//                     for (int j = 1; j < config->AE_interval; j++) {
+//                         if ((i+j) >= n_btvs - config->AE_left_margin) break;
+//                         config->AE_curves[i+j] = i;  // The value field indicates the corresponding anchor.
+//                     }
+//                 }
 
-                for (int i = 0; i < config->AE_right_margin; i++)
-                    config->AE_margins[i] = i;
+//                 for (int i = 0; i < config->AE_right_margin; i++)
+//                     config->AE_margins[i] = i;
 
-                for (int i = 1; i <= config->AE_left_margin; i++)
-                    config->AE_margins[n_btvs-i] = n_btvs-i;
+//                 for (int i = 1; i <= config->AE_left_margin; i++)
+//                     config->AE_margins[n_btvs-i] = n_btvs-i;
 
-                #if defined(VERIFY_RESULTS)
-                map<int, int> tmp = {};
-                tmp.insert(config->AE_margins.begin(), config->AE_margins.end());
-                tmp.insert(config->AE_anchors.begin(), config->AE_anchors.end());
-                tmp.insert(config->AE_curves.begin(), config->AE_curves.end());
-                assert(tmp.size() == n_btvs);
-                #endif
-            } else {
-                cout << "Cardinality is too small to leverage Anchor Encoding. Use Range Encoding instead." << endl;
-                config->encoding = RE;
-                config->INDEX_PATH += "_RE";
-                cout << "Index path: " << config->INDEX_PATH << endl;
-            }
-        }
-    }
-    cout << "=== Encoding scheme: " << config->encoding << endl;
+//                 #if defined(VERIFY_RESULTS)
+//                 map<int, int> tmp = {};
+//                 tmp.insert(config->AE_margins.begin(), config->AE_margins.end());
+//                 tmp.insert(config->AE_anchors.begin(), config->AE_anchors.end());
+//                 tmp.insert(config->AE_curves.begin(), config->AE_curves.end());
+//                 assert(tmp.size() == n_btvs);
+//                 #endif
+//             } else {
+//                 cout << "Cardinality is too small to leverage Anchor Encoding. Use Range Encoding instead." << endl;
+//                 config->encoding = RE;
+//                 config->INDEX_PATH += "_RE";
+//                 cout << "Index path: " << config->INDEX_PATH << endl;
+//             }
+//         }
+//     }
+//     cout << "=== Encoding scheme: " << config->encoding << endl;
 
-    if (options.count("mode")) {
-        string mode = options["mode"].as<string>();
+//     if (options.count("mode")) {
+//         string mode = options["mode"].as<string>();
 
-        if (mode == "build") {
-            build_index(config);
-            return 0;
-        }
+//         if (mode == "build") {
+//             build_index(config);
+//             return 0;
+//         }
 
-        if (!index_is_valid(config))
-            return 0;
+//         if (!index_is_valid(config))
+//             return 0;
 
-        if (mode == "getvalue") {
-            evaluateGetValue(config);
-        } else if (mode == "impact") {
-            evaluateImpact(config, 0);
-        } 
-        // else if (mode == "range") {
-        //     evaluateRange(config);
-        // } 
-        else {
-            evaluate(config, mode);
-        }
-    }
+//         if (mode == "getvalue") {
+//             evaluateGetValue(config);
+//         } else if (mode == "impact") {
+//             evaluateImpact(config, 0);
+//         } 
+//         // else if (mode == "range") {
+//         //     evaluateRange(config);
+//         // } 
+//         else {
+//             evaluate(config, mode);
+//         }
+//     }
 
-    return 0;
-}
+//     return 0;
+// }
 

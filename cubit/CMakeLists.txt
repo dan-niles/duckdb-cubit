@@ -41,6 +41,7 @@ set(BASE_FILES
     src/nicolas/util.cpp
     src/nicolas/segBtv.cpp
     src/nicolas/perf.cpp
+    src/nicolas/nicolas.cpp
 )
 
 # --- Build the bitmap static library
