@@ -30,7 +30,7 @@ D select cubit_query('evaluate 1') as result;
 │    result     │
 │    varchar    │
 ├───────────────┤
-│ Matches: 10 │
+│ Matches: 10   │
 └───────────────┘
 ```
 
