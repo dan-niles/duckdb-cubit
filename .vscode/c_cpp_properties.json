@@ -5,7 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/cubit/src/**",
-                "${workspaceFolder}/src/include/**"
+                "${workspaceFolder}/src/include/**",
+                "${workspaceFolder}/duckdb/src/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
