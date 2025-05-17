@@ -72,3 +72,32 @@ After running these steps, you can install and load your extension using the reg
 INSTALL cubit
 LOAD cubit
 ```
+
+### Running CUBIT
+
+```sql
+CREATE TABLE t(i INTEGER);
+
+INSERT INTO t VALUES (1), (2), (3), (4), (5);
+
+CREATE INDEX cubit_idx ON t USING CUBIT(i)
+```
+
+```sql
+EXPLAIN SELECT * FROM t WHERE i = 3;
+```
+
+```sql
+SELECT * FROM duckdb_indexes WHERE table_name = 't';
+```
+
+```
+DELETE FROM t WHERE i = 2;
+INSERT INTO t VALUES (6);
+
+-- See if index still works
+SELECT * FROM t WHERE i = 6;
+
+-- Drop the index
+DROP INDEX idx_i;
+```

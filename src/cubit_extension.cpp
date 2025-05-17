@@ -1,4 +1,5 @@
 #define DUCKDB_EXTENSION_MAIN
+#include "cubit.hpp"
 
 #include "cubit_extension.hpp"
 #include "cubit_bridge.hpp"
@@ -10,6 +11,7 @@
 #include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 
+
 namespace duckdb {
 
 inline void CubitQueryFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -19,7 +21,7 @@ inline void CubitQueryFunction(DataChunk &args, ExpressionState &state, Vector &
 	    [&](string_t query) {
 	        // Call into CUBIT
 	        std::string q = query.GetString();
-	        std::string response = RunCubitQuery(q); // You define this
+	        std::string response = RunCubitQuery(q);
 	        return StringVector::AddString(result, response);
 	    });
 }
@@ -41,6 +43,8 @@ static void LoadInternal(DatabaseInstance &instance) {
 	// Register a query function
 	auto cubit_query_function = ScalarFunction("cubit_query", {LogicalType::VARCHAR}, LogicalType::VARCHAR, CubitQueryFunction);
 	ExtensionUtil::RegisterFunction(instance, cubit_query_function);
+
+	CUBITModule::Register(instance);
 }
 
 void CubitExtension::Load(DuckDB &db) {

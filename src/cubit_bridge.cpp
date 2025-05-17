@@ -10,8 +10,8 @@ using namespace cubit_lf;
 static std::unique_ptr<cubit_lf::CubitLF> cubit_table;
 static std::once_flag init_flag;
 
-Table_config GenerateTableConfig() {
-    auto config = new Table_config{};
+std::unique_ptr<Table_config> GenerateTableConfig() {
+    auto config = std::make_unique<Table_config>();
 
     // Simulate command line options:
     config->n_workers = 3;
@@ -51,12 +51,12 @@ Table_config GenerateTableConfig() {
     config->encoded_word_len = 31;
     config->rows_per_seg = 1000;
 
-    return *config;
+    return config;
 }
 
 void InitCubitTable() {
     auto config = GenerateTableConfig();
-    cubit_table = std::make_unique<cubit_lf::CubitLF>(config);
+    cubit_table = std::make_unique<cubit_lf::CubitLF>(config.get());
 }
 
 std::string RunCubitQuery(const std::string &query) {
