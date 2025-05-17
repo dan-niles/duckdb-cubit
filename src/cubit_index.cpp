@@ -264,6 +264,10 @@ unique_ptr<ExpressionMatcher> CUBITIndex::MakeFunctionMatcher() const {
     return matcher;
 }
 
+bool CUBITIndex::MatchesColumn(idx_t column_index) const {
+    return indexed_column == column_index;
+}
+
 //------------------------------------------------------------------------------
 // Register Index Type
 //------------------------------------------------------------------------------

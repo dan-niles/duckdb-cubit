@@ -71,6 +71,7 @@ public:
 		return "Constraint violation in CUBIT index";
 	}
 
+	bool MatchesColumn(idx_t column_index) const;
 
 	void SetDirty() {
 		is_dirty = true;
