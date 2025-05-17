@@ -13,6 +13,8 @@
 #include "duckdb/common/vector_operations/vector_operations.hpp"
 #include "duckdb/common/operator/comparison_operators.hpp"
 #include "duckdb/storage/table/scan_state.hpp"
+#include "duckdb/planner/expression/bound_comparison_expression.hpp"
+#include "duckdb/execution/expression_executor.hpp"
 
 namespace duckdb {
 
@@ -86,6 +88,52 @@ CUBITIndex::CUBITIndex(const string &name, IndexConstraintType constraint_type, 
 }
 
 CUBITIndex::~CUBITIndex() = default;
+
+// Scan State
+struct CUBITIndexScanState : public IndexScanState {
+	idx_t current_row = 0;
+	idx_t total_rows = 0;
+	std::vector<uint32_t> matched_rows;
+	uint32_t search_val = 0;
+};
+
+unique_ptr<IndexScanState> CUBITIndex::InitializeScan(Expression *expr, idx_t limit, ClientContext &context) {
+	auto state = make_uniq<CUBITIndexScanState>();
+
+	if (expr && expr->type == ExpressionType::COMPARE_EQUAL) {
+		auto &comp = expr->Cast<BoundComparisonExpression>();
+
+		if (comp.right && comp.right->IsFoldable()) {
+			Value val = ExpressionExecutor::EvaluateScalar(context, *comp.right);
+			if (val.IsNull()) {
+				return state; // nothing to scan
+			}
+			state->search_val = val.GetValue<uint32_t>();
+
+			// Use thread 0 for now — adjust if CUBIT is thread-aware later
+			int tid = 0;
+			state->matched_rows = index->query(tid, state->search_val);
+			state->total_rows = state->matched_rows.size();
+		}
+	}
+
+	return state;
+}
+
+idx_t CUBITIndex::Scan(IndexScanState &state, Vector &row_ids) {
+	auto &scan_state = state.Cast<CUBITIndexScanState>();
+
+	idx_t count = 0;
+	auto output = FlatVector::GetData<row_t>(row_ids);
+
+	// Copy matched row_ids up to STANDARD_VECTOR_SIZE
+	while (scan_state.current_row < scan_state.total_rows && count < STANDARD_VECTOR_SIZE) {
+		output[count++] = scan_state.matched_rows[scan_state.current_row++];
+	}
+
+	row_ids.SetVectorType(VectorType::FLAT_VECTOR); // Ensure type is set
+	return count;
+}
 
 void CUBITIndex::CommitDrop(IndexLock &index_lock) {
     // Drop the in-memory CUBIT index
@@ -193,13 +241,6 @@ ErrorData CUBITIndex::Append(IndexLock &lock, DataChunk &appended_data, Vector &
 
 	return ErrorData {};
 }
-
-// Scan State
-struct CUBITIndexScanState : public IndexScanState {
-	idx_t current_row = 0;
-	idx_t total_rows = 0;
-	unique_array<row_t> row_ids = nullptr;
-};
 
 unique_ptr<ExpressionMatcher> CUBITIndex::MakeFunctionMatcher() const {
     // The Cubit index supports '=' and 'BETWEEN' operators

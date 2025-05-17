@@ -35,6 +35,9 @@ public:
 
     CUBITIndexType index;
 
+	unique_ptr<IndexScanState> InitializeScan(Expression *expr, idx_t limit, ClientContext &context);
+	idx_t Scan(IndexScanState &state, Vector &row_ids);
+
 public:
     //! Called when data is appended to the index. The lock obtained from InitializeLock must be held
 	ErrorData Append(IndexLock &lock, DataChunk &entries, Vector &row_identifiers) override;
