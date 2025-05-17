@@ -95,9 +95,5 @@ SELECT * FROM duckdb_indexes WHERE table_name = 't';
 DELETE FROM t WHERE i = 2;
 INSERT INTO t VALUES (6);
 
--- See if index still works
-SELECT * FROM t WHERE i = 6;
-
--- Drop the index
-DROP INDEX idx_i;
+DROP INDEX cubit_idx;
 ```
