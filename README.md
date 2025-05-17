@@ -80,7 +80,7 @@ CREATE TABLE t(i INTEGER);
 
 INSERT INTO t VALUES (1), (2), (3), (4), (5);
 
-CREATE INDEX cubit_idx ON t USING CUBIT(i)
+CREATE INDEX cubit_idx ON t USING CUBIT(i);
 ```
 
 ```sql
