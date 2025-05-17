@@ -1360,6 +1360,19 @@ int Cubit::__init_append(int tid, int rowID, int val)
     return 0;
 } 
 
+void Cubit::reset() {
+    for (int i = 0; i < num_bitmaps; ++i) {
+        if (bitmaps[i]) {
+            delete bitmaps[i]->btv;
+            delete bitmaps[i]->seg_btv;
+            delete bitmaps[i];
+        }
+    }
+
+    g_number_of_rows = 0;
+
+}
+
 
 // int Cubit::evaluate_common(int tid, uint32_t val)
 // {   

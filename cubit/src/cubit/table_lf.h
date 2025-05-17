@@ -22,6 +22,8 @@ public:
     int trans_commit(int tid, uint64_t db_timestamp_t, uint64_t db_row_nums) override;
 
     int merge_bitmap(int tid, uint32_t val, TransDesc *trans, cubit::Bitmap *bitmap_old, cubit::Bitmap *bitmap_new, std::map<uint64_t, RUB> *rubs) override;
+
+    int size();
 };
 
 };

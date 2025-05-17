@@ -181,6 +181,8 @@ public:
     // The message is a pointer to struct merge_req.
     std::queue<struct merge_req *> * merge_req_queues;
     std::mutex * lk_merge_req_queues;
+
+    void reset();
 };
 
 };

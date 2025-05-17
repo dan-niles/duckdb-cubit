@@ -215,3 +215,7 @@ out_merge:
     return 0;
 }
 
+int CubitLF::size()
+{
+    return g_number_of_rows;
+}
