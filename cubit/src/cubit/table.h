@@ -131,6 +131,8 @@ protected:
 
     int evaluate_Curve(int, uint32_t);
 
+    std::vector<uint32_t> query_common(int tid, uint32_t val);
+
 public:
 
     /* *********************** */
@@ -147,6 +149,7 @@ public:
     int remove(int, uint64_t);
     int update(int, uint64_t, int);
     int evaluate(int, uint32_t);
+    std::vector<uint32_t> query(int, uint32_t);
     void _read_btv(int, int, TransDesc*, Table_config*);
 
     TransDesc * trans_begin(int, uint64_t db_timestamp_t = UINT64_MAX);

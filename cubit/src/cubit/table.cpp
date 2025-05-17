@@ -1324,6 +1324,118 @@ int Cubit::range(int tid, uint32_t start, uint32_t range) {
     return cnt;
 }
 
+std::vector<uint32_t> Cubit::query(int tid, uint32_t val) {
+    if (config->encoding == EE || config->encoding == RE) 
+    {
+        return query_common(tid, val);
+    }
+    else if (config->encoding == AE) 
+    {  
+        // return empty vector for now
+        return {};  
+    }
+    return {};
+}
+
+
+std::vector<uint32_t> Cubit::query_common(int tid, uint32_t val) {
+    ThreadInfo *th = &g_ths_info[tid];
+    assert(val < num_bitmaps);
+
+    rcu_read_lock();
+
+    TransDesc *trans = (TransDesc *)__atomic_load_n(&th->active_trans, MM_ACQUIRE);
+    bool reuse_bitmap = true;
+
+    if (!trans)
+        trans = trans_begin(tid);
+
+    Bitmap *bitmap_old = __atomic_load_n(&bitmaps[val], MM_ACQUIRE);
+
+    // Handle MVCC (scan backwards if needed)
+    uint64_t tsp_begin = READ_ONCE(bitmap_old->l_commit_ts);
+    uint64_t tsp_end = READ_ONCE(trans->l_start_ts);
+    while (tsp_begin > tsp_end) {
+        bitmap_old = __atomic_load_n(&bitmap_old->next, MM_ACQUIRE);
+        tsp_begin = READ_ONCE(bitmap_old->l_commit_ts);
+        reuse_bitmap = false;
+    }
+
+    map<uint64_t, RUB> rubs{};
+    if (tsp_begin < tsp_end) {
+        get_rubs_on_btv(tsp_begin, tsp_end, READ_ONCE(bitmap_old->l_start_trans), val, rubs);
+    }
+
+    ibis::bitvector *old_btv = READ_ONCE(bitmap_old->btv);
+    SegBtv *old_seg_btv = READ_ONCE(bitmap_old->seg_btv);
+
+    std::vector<uint32_t> result;
+
+    if ((rubs.size() < merge_threshold) || !reuse_bitmap) {
+        // Case 1: no merge, apply RUBs directly
+
+        if (config->segmented_btv) {
+            old_seg_btv->decode(result, config); // decode fills result with 1-bits
+        } else {
+            old_btv->decode(result, config);     // same here for flat BTV
+        }
+
+        // Apply R.U.B. modifications (flip bits)
+        for (const auto &[row_id_t, rub_t] : rubs) {
+            assert(rub_t.pos.count(val));
+            bool bit_set = config->segmented_btv ?
+                           old_seg_btv->getBit(row_id_t, config) :
+                           old_btv->getBit(row_id_t, config);
+
+            if (bit_set) {
+                // Flip OFF: remove from result
+                result.erase(std::remove(result.begin(), result.end(), row_id_t), result.end());
+            } else {
+                // Flip ON: add to result
+                result.push_back(row_id_t);
+            }
+        }
+    } else {
+        // Case 2: merge required — materialize a new bitmap with RUBs applied
+
+        std::unique_ptr<ibis::bitvector> new_btv;
+        std::unique_ptr<SegBtv> new_seg_btv;
+
+        if (config->segmented_btv) {
+            new_seg_btv = std::make_unique<SegBtv>(*old_seg_btv);
+            new_seg_btv->adjustSize(0, old_seg_btv->get_rows());
+
+            for (const auto &[row_id_t, rub_t] : rubs) {
+                assert(rub_t.pos.count(val));
+                new_seg_btv->setBit(row_id_t, 1, config);
+            }
+
+            *new_seg_btv ^= *old_seg_btv;
+            new_seg_btv->decode(result, config);
+        } else {
+            new_btv = std::make_unique<ibis::bitvector>(*old_btv);
+
+            for (const auto &[row_id_t, rub_t] : rubs) {
+                assert(rub_t.pos.count(val));
+                new_btv->setBit(row_id_t, 1, config);
+            }
+
+            *new_btv ^= *old_btv;
+            new_btv->decode(result, config);
+        }
+
+        // Optionally enqueue merge request, but probably not needed here
+    }
+
+    rcu_read_unlock();
+
+    if (autoCommit) {
+        assert(trans_commit(tid) == -ENOENT);
+    }
+
+    return result;
+}
+
 // This is a helper function
 // which allows external applications (e.g., DBx1000 and MonetDB) to initialize the bitmap index.
 // This function shouldn't be used as usual.
