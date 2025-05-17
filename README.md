@@ -91,9 +91,13 @@ EXPLAIN SELECT * FROM t WHERE i = 3;
 SELECT * FROM duckdb_indexes WHERE table_name = 't';
 ```
 
-```
+```sql
 DELETE FROM t WHERE i = 2;
 INSERT INTO t VALUES (6);
 
+-- See if index still works
+SELECT * FROM t WHERE i = 6;
+
+-- Drop the index
 DROP INDEX cubit_idx;
 ```
