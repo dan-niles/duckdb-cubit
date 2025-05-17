@@ -16,8 +16,8 @@
 
 namespace duckdb {
 
-std::unique_ptr<Table_config> GenerateTableConfig() {
-    auto config = std::make_unique<Table_config>();
+Table_config* GenerateTableConfig() {
+    auto config = new Table_config{};
 
     // Simulate command line options:
     config->n_workers = 3;
@@ -75,7 +75,7 @@ CUBITIndex::CUBITIndex(const string &name, IndexConstraintType constraint_type, 
     }
     indexed_column = column_ids[0];
 
-    index = std::make_unique<cubit_lf::CubitLF>(GenerateTableConfig().get());
+    index = std::make_unique<cubit_lf::CubitLF>(GenerateTableConfig());
 
 	if (info.IsValid()) {
         throw NotImplementedException("CUBIT index persistence is not implemented yet");
