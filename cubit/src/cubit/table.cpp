@@ -1433,6 +1433,11 @@ std::vector<uint32_t> Cubit::query_common(int tid, uint32_t val) {
         assert(trans_commit(tid) == -ENOENT);
     }
 
+    for (auto &rid : result) {
+        assert(rid > 0);
+        rid -= 1;
+    }
+
     return result;
 }
 
