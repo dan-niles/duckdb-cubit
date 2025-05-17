@@ -1,8 +1,10 @@
 #include "cubit_bridge.hpp"
 
+#include <json/json.hpp>
 #include <sstream>
 #include <memory>
 #include <mutex>
+#include <fstream>
 
 #include "cubit/table_lf.h"
 using namespace cubit_lf;
@@ -11,45 +13,49 @@ static std::unique_ptr<cubit_lf::CubitLF> cubit_table;
 static std::once_flag init_flag;
 
 Table_config* GenerateTableConfig() {
+    std::ifstream config_file("/home/danniles/Projects/duckdb-cubit/cubit/config.json");
+	nlohmann::json j;
+    config_file >> j;
+
     auto config = new Table_config{};
 
-    // Simulate command line options:
-    config->n_workers = 3;
-    config->g_cardinality = 5;
-    config->DATA_PATH = "/home/danniles/cubit/data";
-    config->INDEX_PATH = "/home/danniles/cubit/index";
-    config->n_rows = 1;
-    config->n_udis = 100;
-    config->n_queries = 100;
-    config->verbose = false;
-    config->enable_fence_pointer = false;
-    config->enable_parallel_cnt = false;
-    config->show_memory = false;
-    config->on_disk = false;
-    config->approach = "cubit-lf";
-    config->nThreads_for_getval = 4;          // Must be > 0
-    config->time_out = 1000;
-    config->n_range = 1;                       // Must be >= 1
-    config->range_algo = "naive";
-    config->showEB = false;
-    config->decode = false;
-    config->autoCommit = true;
-    config->n_merge_threshold = 10;
-    config->db_control = false;
-    config->n_workers_per_merge_th = 1;
+    config->n_workers = j["n_workers"];
+    config->g_cardinality = j["g_cardinality"];
+    config->DATA_PATH = j["DATA_PATH"];
+    config->INDEX_PATH = j["INDEX_PATH"];
+    config->n_rows = j["n_rows"];
+    config->n_udis = j["n_udis"];
+    config->n_queries = j["n_queries"];
+    config->verbose = j["verbose"];
+    config->enable_fence_pointer = j["enable_fence_pointer"];
+    config->enable_parallel_cnt = j["enable_parallel_cnt"];
+    config->show_memory = j["show_memory"];
+    config->on_disk = j["on_disk"];
+    config->approach = j["approach"];
+    config->nThreads_for_getval = j["nThreads_for_getval"];
+    config->time_out = j["time_out"];
+    config->n_range = j["n_range"];
+    config->range_algo = j["range_algo"];
+    config->showEB = j["showEB"];
+    config->decode = j["decode"];
+    config->autoCommit = j["autoCommit"];
+    config->n_merge_threshold = j["n_merge_threshold"];
+    config->db_control = j["db_control"];
+    config->n_workers_per_merge_th = j["n_workers_per_merge_th"];
 
-    // Encoding: default EE, or set to AE/RE as you want
-    config->encoding = EE;
+    std::string encoding = j["encoding"];
+    if (encoding == "EE") config->encoding = EE;
+    else if (encoding == "AE") config->encoding = AE;
+    else if (encoding == "RE") config->encoding = RE;
 
-    // AE margins and intervals will need to be set explicitly after this
-    config->AE_left_margin = 0;
-    config->AE_right_margin = 0;
-    config->AE_interval = 0;
+    config->AE_left_margin = j["AE_left_margin"];
+    config->AE_right_margin = j["AE_right_margin"];
+    config->AE_interval = j["AE_interval"];
     config->AE_anchors = {};
 
-    config->segmented_btv = true;
-    config->encoded_word_len = 31;
-    config->rows_per_seg = 1000;
+    config->segmented_btv = j["segmented_btv"];
+    config->encoded_word_len = j["encoded_word_len"];
+    config->rows_per_seg = j["rows_per_seg"];
 
     return config;
 }
