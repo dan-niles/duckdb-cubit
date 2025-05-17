@@ -186,6 +186,7 @@ public:
     std::mutex * lk_merge_req_queues;
 
     void reset();
+    int size();
 };
 
 };

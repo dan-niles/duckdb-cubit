@@ -1485,6 +1485,11 @@ void Cubit::reset() {
 
 }
 
+int Cubit::size()
+{
+    return g_number_of_rows;
+}
+
 
 // int Cubit::evaluate_common(int tid, uint32_t val)
 // {   
