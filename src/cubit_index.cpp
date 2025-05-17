@@ -14,6 +14,7 @@
 #include "duckdb/common/operator/comparison_operators.hpp"
 #include "duckdb/storage/table/scan_state.hpp"
 #include "duckdb/planner/expression/bound_comparison_expression.hpp"
+#include "duckdb/planner/expression/bound_constant_expression.hpp"
 #include "duckdb/execution/expression_executor.hpp"
 
 namespace duckdb {
@@ -100,20 +101,31 @@ struct CUBITIndexScanState : public IndexScanState {
 unique_ptr<IndexScanState> CUBITIndex::InitializeScan(Expression *expr, idx_t limit, ClientContext &context) {
 	auto state = make_uniq<CUBITIndexScanState>();
 
-	if (expr && expr->type == ExpressionType::COMPARE_EQUAL) {
-		auto &comp = expr->Cast<BoundComparisonExpression>();
+	if (!expr) {
+		return state;
+	}
 
-		if (comp.right && comp.right->IsFoldable()) {
-			Value val = ExpressionExecutor::EvaluateScalar(context, *comp.right);
-			if (val.IsNull()) {
-				return state; // nothing to scan
-			}
+	if (expr->type == ExpressionType::VALUE_CONSTANT) {
+		auto &const_expr = expr->Cast<BoundConstantExpression>();
+		auto val = const_expr.value;
+
+		if (!val.IsNull()) {
 			state->search_val = val.GetValue<uint32_t>();
-
-			// Use thread 0 for now — adjust if CUBIT is thread-aware later
 			int tid = 0;
 			state->matched_rows = index->query(tid, state->search_val);
 			state->total_rows = state->matched_rows.size();
+		}
+	} else if (expr->type == ExpressionType::COMPARE_EQUAL) {
+		// Support fallback (optional)
+		auto &comp = expr->Cast<BoundComparisonExpression>();
+		if (comp.right && comp.right->IsFoldable()) {
+			Value val = ExpressionExecutor::EvaluateScalar(context, *comp.right);
+			if (!val.IsNull()) {
+				state->search_val = val.GetValue<uint32_t>();
+				int tid = 0;
+				state->matched_rows = index->query(tid, state->search_val);
+				state->total_rows = state->matched_rows.size();
+			}
 		}
 	}
 
