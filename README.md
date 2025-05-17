@@ -1,7 +1,6 @@
-# Cubit Extension for DucKDB
+# CUBIT Extension for DucKDB
 
-This extension, Cubit, allow you to create concurrently updatable bitmap indices.
-
+This extension, CUBIT, allows you to create concurrently updatable bitmap indices in duckdb.
 
 ## Building
 
@@ -29,57 +28,28 @@ The main binaries that will be built are:
 ## Running the extension
 To run the extension code, simply start the shell with `./build/release/duckdb`.
 
-Now we can use the features from the extension directly in DuckDB. The template contains a single scalar function `cubit_query()` that takes a string arguments and returns a string:
-```
+Now we can use the features from the extension directly in DuckDB. The template contains a scalar function `cubit_query()` that takes a string arguments and returns a string:
+```sql
+D select cubit_query('append 1') as result;
+┌───────────────────┐
+│      result       │
+│      varchar      │
+├───────────────────┤
+│ Append successful │
+└───────────────────┘
+
 D select cubit_query('evaluate 1') as result;
 ┌───────────────┐
 │    result     │
 │    varchar    │
 ├───────────────┤
-│ Matches: 10   │
+│ Matches: 1    │
 └───────────────┘
 ```
 
-## Running the tests
-Different tests can be created for DuckDB extensions. The primary way of testing DuckDB extensions should be the SQL tests in `./test/sql`. These SQL tests can be run using:
-```sh
-make test
-```
+This is used just for testing & debugging the functionality of the index. Refer to the section below for using CUBIT with an actual table.
 
-### Installing the deployed binaries
-To install your extension binaries from S3, you will need to do two things. Firstly, DuckDB should be launched with the
-`allow_unsigned_extensions` option set to true. How to set this will depend on the client you're using. Some examples:
-
-CLI:
-```shell
-duckdb -unsigned
-```
-
-Python:
-```python
-con = duckdb.connect(':memory:', config={'allow_unsigned_extensions' : 'true'})
-```
-
-NodeJS:
-```js
-db = new duckdb.Database(':memory:', {"allow_unsigned_extensions": "true"});
-```
-
-Secondly, you will need to set the repository endpoint in DuckDB to the HTTP url of your bucket + version of the extension
-you want to install. To do this run the following SQL query in DuckDB:
-```sql
-SET custom_extension_repository='bucket.s3.eu-west-1.amazonaws.com/<your_extension_name>/latest';
-```
-Note that the `/latest` path will allow you to install the latest extension version available for your current version of
-DuckDB. To specify a specific version, you can pass the version instead.
-
-After running these steps, you can install and load your extension using the regular INSTALL/LOAD commands in DuckDB:
-```sql
-INSTALL cubit
-LOAD cubit
-```
-
-### Running CUBIT
+### Using CUBIT in a table
 
 ```sql
 CREATE TABLE t(i INTEGER);
@@ -106,6 +76,12 @@ SELECT * FROM t WHERE i = 6;
 
 -- Drop the index
 DROP INDEX cubit_idx;
+```
+
+## Running the tests
+Different tests can be created for DuckDB extensions. The primary way of testing DuckDB extensions should be the SQL tests in `./test/sql`. These SQL tests can be run using:
+```sh
+make test
 ```
 
 ## Acknowledgements
