@@ -10,7 +10,7 @@ using namespace cubit_lf;
 static std::unique_ptr<cubit_lf::CubitLF> cubit_table;
 static std::once_flag init_flag;
 
-void InitCubitTable() {
+Table_config GenerateTableConfig() {
     auto config = new Table_config{};
 
     // Simulate command line options:
@@ -51,9 +51,12 @@ void InitCubitTable() {
     config->encoded_word_len = 31;
     config->rows_per_seg = 1000;
 
-    // Finally create Cubit with fully initialized config
+    return *config;
+}
+
+void InitCubitTable() {
+    auto config = GenerateTableConfig();
     cubit_table = std::make_unique<cubit_lf::CubitLF>(config);
-    // cubit_table->init_sequential_test();
 }
 
 std::string RunCubitQuery(const std::string &query) {
