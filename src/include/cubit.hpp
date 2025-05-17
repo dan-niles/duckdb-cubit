@@ -14,7 +14,7 @@ public:
 
 		// // Optimizers
 		// RegisterExprOptimizer(db);
-		// RegisterScanOptimizer(db);
+		RegisterScanOptimizer(db);
 		// RegisterTopKOptimizer(db);
 		// RegisterJoinOptimizer(db);
 	}
@@ -29,7 +29,7 @@ private:
 
 	// static void RegisterExprOptimizer(DatabaseInstance &db);
 	// static void RegisterTopKOperator(DatabaseInstance &db);
-	// static void RegisterScanOptimizer(DatabaseInstance &db);
+	static void RegisterScanOptimizer(DatabaseInstance &db);
 	// static void RegisterJoinOptimizer(DatabaseInstance &db);
 };
 

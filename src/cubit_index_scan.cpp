@@ -147,7 +147,7 @@ TableFunction CUBITIndexScanFunction::GetFunction() {
 	func.to_string = CUBITIndexScanToString;
 	func.table_scan_progress = nullptr;
 	func.projection_pushdown = true;
-	func.filter_pushdown = false;
+	func.filter_pushdown = true;
 	func.get_bind_info = CUBITIndexScanBindInfo;
 
 	return func;
