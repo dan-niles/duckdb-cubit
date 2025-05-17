@@ -10,8 +10,8 @@ using namespace cubit_lf;
 static std::unique_ptr<cubit_lf::CubitLF> cubit_table;
 static std::once_flag init_flag;
 
-std::unique_ptr<Table_config> GenerateTableConfig() {
-    auto config = std::make_unique<Table_config>();
+Table_config* GenerateTableConfig() {
+    auto config = new Table_config{};
 
     // Simulate command line options:
     config->n_workers = 3;
@@ -56,7 +56,7 @@ std::unique_ptr<Table_config> GenerateTableConfig() {
 
 void InitCubitTable() {
     auto config = GenerateTableConfig();
-    cubit_table = std::make_unique<cubit_lf::CubitLF>(config.get());
+    cubit_table = std::make_unique<cubit_lf::CubitLF>(config);
 }
 
 std::string RunCubitQuery(const std::string &query) {
@@ -104,7 +104,17 @@ std::string RunCubitQuery(const std::string &query) {
 		int matches = cubit_table->evaluate(tid, value);
 		result << "Matches: " << matches;
 
-	} else if (cmd == "range") {
+	} else if (cmd == "query") {
+		uint32_t value;
+		ss >> value;
+		std::vector<uint32_t> matches = cubit_table->query(tid, value);
+		result << "Matches: " << matches.size() << " [";
+        for (const auto &match : matches) {
+            result << match << " ";
+        }
+        result << "]";
+	}
+    else if (cmd == "range") {
 		uint32_t low, high;
 		ss >> low >> high;
 		int matches = cubit_table->range(tid, low, high);
