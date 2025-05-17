@@ -101,3 +101,9 @@ SELECT * FROM t WHERE i = 6;
 -- Drop the index
 DROP INDEX cubit_idx;
 ```
+
+## Acknowledgements
+
+CUBIT Source Code: https://github.com/junchangwang/CUBIT
+
+Wang, Junchang, and Manos Athanassoulis. "CUBIT: Concurrent Updatable Bitmap Indexing (Extended Version)." arXiv preprint arXiv:2410.16929 (2024).
