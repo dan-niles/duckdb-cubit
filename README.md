@@ -6,6 +6,12 @@ This extension, Cubit, allow you to create concurrently updatable bitmap indices
 ## Building
 
 ### Build steps
+
+Clone the repo:
+```sh
+git clone --recurse-submodules https://github.com/dan-niles/duckdb-cubit.git
+```
+
 Now to build the extension, run:
 ```sh
 GEN=ninja make
