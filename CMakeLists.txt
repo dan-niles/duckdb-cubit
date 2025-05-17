@@ -28,6 +28,9 @@ include_directories(
 set(EXTENSION_SOURCES
     src/cubit_extension.cpp
     src/cubit_bridge.cpp
+    src/cubit_index.cpp
+    src/cubit_index_plan.cpp
+    src/cubit_index_physical_create.cpp
 )
 
 # --- Use DuckDB-provided macros to build the extension
