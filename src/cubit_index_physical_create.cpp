@@ -143,24 +143,26 @@ public:
 		gstate.collection->InitializeScanChunk(scan_chunk);
 	}
 
-	TaskExecutionResult ExecuteTask(TaskExecutionMode mode) override {
+TaskExecutionResult ExecuteTask(TaskExecutionMode mode) override {
 
-		auto &index = gstate.global_index->index;
-		auto &scan_state = gstate.scan_state;
-		auto &collection = gstate.collection;
+	auto &index = gstate.global_index->index;
+	auto &scan_state = gstate.scan_state;
+	auto &collection = gstate.collection;
 
-		while (collection->Scan(scan_state, local_scan_state, scan_chunk)) {
+	while (collection->Scan(scan_state, local_scan_state, scan_chunk)) {
 
-			const auto count = scan_chunk.size();
-			auto &col_vector = scan_chunk.data[0];
-			auto &rowid_vec = scan_chunk.data[1];
+		const auto count = scan_chunk.size();
+		auto &col_vector = scan_chunk.data[0];
+		auto &rowid_vec = scan_chunk.data[1];
 
-			UnifiedVectorFormat col_format;
-			UnifiedVectorFormat rowid_format;
+		UnifiedVectorFormat col_format;
+		UnifiedVectorFormat rowid_format;
 
-			col_vector.ToUnifiedFormat(count, col_format);
-			rowid_vec.ToUnifiedFormat(count, rowid_format);
+		col_vector.ToUnifiedFormat(count, col_format);
+		rowid_vec.ToUnifiedFormat(count, rowid_format);
 
+		const auto &col_type = col_vector.GetType();
+		if (col_type.id() == LogicalTypeId::INTEGER) {
 			auto data_ptr = UnifiedVectorFormat::GetData<int32_t>(col_format);
 			auto row_ptr = UnifiedVectorFormat::GetData<row_t>(rowid_format);
 
@@ -168,36 +170,66 @@ public:
 				const auto col_idx = col_format.sel->get_index(i);
 				const auto row_idx = rowid_format.sel->get_index(i);
 
-				// Check for NULL values
 				if (!col_format.validity.RowIsValid(col_idx) || !rowid_format.validity.RowIsValid(row_idx)) {
 					executor.PushError(ErrorData("Invalid data in CUBIT index construction: NULL values not supported"));
 					return TaskExecutionResult::TASK_ERROR;
 				}
 
-				// Add the row to the index
-				const auto value = data_ptr[col_idx];
+				const auto value = static_cast<uint32_t>(data_ptr[col_idx]);
 				const int result = index->append(thread_id, value);
-
-				// Check for errors
 				if (result != 0) {
 					executor.PushError(ErrorData("Error in CUBIT index construction"));
 					return TaskExecutionResult::TASK_ERROR;
 				}
 			}
 
-			// Update the built count
-			gstate.built_count += count;
+		} else if (col_type.id() == LogicalTypeId::VARCHAR) {
+			auto data_ptr = UnifiedVectorFormat::GetData<string_t>(col_format);
+			auto row_ptr = UnifiedVectorFormat::GetData<row_t>(rowid_format);
 
-			if (mode == TaskExecutionMode::PROCESS_PARTIAL) {
-				// yield!
-				return TaskExecutionResult::TASK_NOT_FINISHED;
+			for (idx_t i = 0; i < count; i++) {
+				const auto col_idx = col_format.sel->get_index(i);
+				const auto row_idx = rowid_format.sel->get_index(i);
+
+				if (!col_format.validity.RowIsValid(col_idx) || !rowid_format.validity.RowIsValid(row_idx)) {
+					executor.PushError(ErrorData("Invalid data in CUBIT index construction: NULL values not supported"));
+					return TaskExecutionResult::TASK_ERROR;
+				}
+
+				string str_value = data_ptr[col_idx].GetString();
+
+				uint32_t encoded_value;
+				auto it = gstate.global_index->string_to_code.find(str_value);
+				if (it != gstate.global_index->string_to_code.end()) {
+					encoded_value = it->second;
+				} else {
+					encoded_value = gstate.global_index->next_string_code++;
+					gstate.global_index->string_to_code[str_value] = encoded_value;
+					gstate.global_index->code_to_string.push_back(str_value);
+				}
+
+				const int result = index->append(thread_id, encoded_value);
+				if (result != 0) {
+					executor.PushError(ErrorData("Error in CUBIT index construction"));
+					return TaskExecutionResult::TASK_ERROR;
+				}
 			}
+
+		} else {
+			executor.PushError(ErrorData("Unsupported column type in CUBIT index construction"));
+			return TaskExecutionResult::TASK_ERROR;
 		}
 
-		// Finish task!
-		event->FinishTask();
-		return TaskExecutionResult::TASK_FINISHED;
+		gstate.built_count += count;
+
+		if (mode == TaskExecutionMode::PROCESS_PARTIAL) {
+			return TaskExecutionResult::TASK_NOT_FINISHED;
+		}
 	}
+
+	event->FinishTask();
+	return TaskExecutionResult::TASK_FINISHED;
+}
 
 private:
 	CreateCUBITIndexGlobalState &gstate;

@@ -29,6 +29,44 @@ public:
 		optimize_function = Optimize;
 	}
 
+    static unique_ptr<CUBITIndexScanBindData> TryCreateIndexBindData(
+        ClientContext &context,
+        DuckTableEntry &duck_table,
+        DataTableInfo &table_info,
+        idx_t column_index,
+        const Value &search_value
+    ) {
+        unique_ptr<CUBITIndexScanBindData> bind_data = nullptr;
+
+        table_info.GetIndexes().BindAndScan<CUBITIndex>(context, table_info, [&](CUBITIndex &cubit_index) {
+            if (!cubit_index.MatchesColumn(column_index)) {
+                return false;
+            }
+
+            uint32_t encoded_val;
+
+            if (search_value.type().id() == LogicalTypeId::VARCHAR) {
+                auto str = search_value.ToString();
+                auto it = cubit_index.string_to_code.find(str);
+                if (it == cubit_index.string_to_code.end()) {
+                    return false; // no match in dictionary
+                }
+                encoded_val = it->second;
+            } else {
+                try {
+                    encoded_val = search_value.GetValue<uint32_t>();
+                } catch (...) {
+                    return false; // unsupported or invalid cast
+                }
+            }
+
+            bind_data = make_uniq<CUBITIndexScanBindData>(duck_table, cubit_index, /*limit*/ 0, encoded_val);
+            return true;
+        });
+
+        return bind_data;
+    }
+
     static bool TryOptimizeGetWithFilter(ClientContext &context, unique_ptr<LogicalOperator> &plan, LogicalFilter &filter, LogicalGet &get) {
         if (get.function.name != "seq_scan") {
             return false;
@@ -50,18 +88,12 @@ public:
                 cmp.right->type != ExpressionType::VALUE_CONSTANT) continue;
 
             auto &column_ref = cmp.left->Cast<BoundColumnRefExpression>();
-            auto &const_val = cmp.right->Cast<BoundConstantExpression>().value;
+            const Value &const_val = cmp.right->Cast<BoundConstantExpression>().value;
 
             idx_t column_index = column_ref.binding.column_index;
-
             unique_ptr<CUBITIndexScanBindData> bind_data = nullptr;
 
-            table_info.GetIndexes().BindAndScan<CUBITIndex>(context, table_info, [&](CUBITIndex &cubit_index) {
-                if (!cubit_index.MatchesColumn(column_index)) return false;
-                auto search_value = const_val.GetValue<uint32_t>();
-                bind_data = make_uniq<CUBITIndexScanBindData>(duck_table, cubit_index, /*limit*/ 0, search_value);
-                return true;
-            });
+            bind_data = TryCreateIndexBindData(context, duck_table, table_info, column_index, const_val);
 
             if (!bind_data) continue;
 
@@ -100,14 +132,10 @@ public:
             auto &cmp_filter = filter->Cast<ConstantFilter>();
             if (cmp_filter.comparison_type != ExpressionType::COMPARE_EQUAL) continue;
 
-            Value search_value = cmp_filter.constant;
+            const Value &search_value = cmp_filter.constant;
 
             unique_ptr<CUBITIndexScanBindData> bind_data = nullptr;
-            table_info.GetIndexes().BindAndScan<CUBITIndex>(context, table_info, [&](CUBITIndex &cubit_index) {
-                if (!cubit_index.MatchesColumn(column_index)) return false;
-                bind_data = make_uniq<CUBITIndexScanBindData>(duck_table, cubit_index, /*limit*/ 0, search_value.GetValue<uint32_t>());
-                return true;
-            });
+            bind_data = TryCreateIndexBindData(context, duck_table, table_info, column_index, search_value);
 
             if (!bind_data) continue;
 
@@ -121,8 +149,6 @@ public:
     }
 
     static bool TryOptimize(ClientContext &context, unique_ptr<LogicalOperator> &plan) {
-        std::cerr << "Plan type: " << LogicalOperatorToString(plan->type) << std::endl;
-
         if (plan->type == LogicalOperatorType::LOGICAL_FILTER) {
             auto &filter = plan->Cast<LogicalFilter>();
             if (filter.children.size() != 1 || filter.children[0]->type != LogicalOperatorType::LOGICAL_GET) {

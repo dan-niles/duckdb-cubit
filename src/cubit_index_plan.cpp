@@ -24,8 +24,8 @@ PhysicalOperator &CUBITIndex::CreatePlan(PlanIndexInput &input) {
 		throw BinderException("CUBIT indexes can only be created over a single column of keys.");
 	}
 	auto &arr_type = create_index.expressions[0]->return_type;
-	if (arr_type.id() != LogicalTypeId::INTEGER) {
-		throw BinderException("CUBIT index keys must be of type INTEGER.");
+	if (arr_type.id() != LogicalTypeId::INTEGER && arr_type.id() != LogicalTypeId::VARCHAR) {
+		throw BinderException("CUBIT index keys must be of type INTEGER or VARCHAR.");
 	}
 
 	// projection to execute expressions on the key columns

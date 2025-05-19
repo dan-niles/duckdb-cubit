@@ -165,14 +165,12 @@ ErrorData CUBITIndex::Insert(IndexLock &lock, DataChunk &input, Vector &rowid_ve
 	D_ASSERT(input.ColumnCount() == 1);
 	auto &col_vec = input.data[0];
 	auto &col_type = col_vec.GetType();
-	D_ASSERT(col_type.id() == LogicalTypeId::INTEGER);
+	D_ASSERT(col_type.id() == LogicalTypeId::INTEGER || col_type.id() == LogicalTypeId::VARCHAR);
 
 	auto tid = 0; // single-threaded for now
 
 	UnifiedVectorFormat format;
 	col_vec.ToUnifiedFormat(input.size(), format);
-
-	auto data = (int32_t *)format.data;
 
 	for (idx_t i = 0; i < input.size(); ++i) {
 		auto idx = format.sel->get_index(i);
@@ -180,15 +178,35 @@ ErrorData CUBITIndex::Insert(IndexLock &lock, DataChunk &input, Vector &rowid_ve
 			continue; // skip nulls
 		}
 
-		int32_t value = data[idx];
-		auto result = index->append(tid, value);
+		uint32_t encoded_value;
+
+		if (col_type.id() == LogicalTypeId::INTEGER) {
+			auto data = (int32_t *)format.data;
+			encoded_value = static_cast<uint32_t>(data[idx]);
+
+		} else if (col_type.id() == LogicalTypeId::VARCHAR) {
+			auto data = (string_t *)format.data;
+			string s = data[idx].GetString();
+
+			auto it = string_to_code.find(s);
+			if (it != string_to_code.end()) {
+				encoded_value = it->second;
+			} else {
+				encoded_value = next_string_code++;
+				string_to_code[s] = encoded_value;
+				code_to_string.push_back(s);
+			}
+		} else {
+			throw InternalException("Unsupported column type in CUBITIndex::Insert");
+		}
+
+		auto result = index->append(tid, encoded_value);
 		if (result != 0) {
-			// Insert failed, return an error
 			return ErrorData{ExceptionType::INDEX, "CUBIT Insert failed"};
 		}
 	}
 
-	return ErrorData {};
+	return ErrorData{};
 }
 
 void CUBITIndex::Delete(IndexLock &lock, DataChunk &input, Vector &rowid_vec) {
@@ -262,7 +280,6 @@ ErrorData CUBITIndex::Append(IndexLock &lock, DataChunk &appended_data, Vector &
 }
 
 unique_ptr<ExpressionMatcher> CUBITIndex::MakeFunctionMatcher() const {
-    // The Cubit index supports '=' and 'BETWEEN' operators
     unordered_set<string> supported_functions = {"=", "between"};
 
     auto matcher = make_uniq<FunctionExpressionMatcher>();
@@ -270,14 +287,12 @@ unique_ptr<ExpressionMatcher> CUBITIndex::MakeFunctionMatcher() const {
     matcher->expr_type = make_uniq<SpecificExpressionTypeMatcher>(ExpressionType::BOUND_FUNCTION);
     matcher->policy = SetMatcher::Policy::UNORDERED;
 
-    // Left-hand side: indexed column of type INT32
+    // LHS: match any type (loose match)
     auto lhs_matcher = make_uniq<ExpressionMatcher>();
-    lhs_matcher->type = make_uniq<SpecificTypeMatcher>(LogicalType::INTEGER);
     matcher->matchers.push_back(std::move(lhs_matcher));
 
-    // Right-hand side: also INT32 (for '=': single INT32; for 'between': two INT32 constants)
+    // RHS: also match any type (loose match)
     auto rhs_matcher = make_uniq<ExpressionMatcher>();
-    rhs_matcher->type = make_uniq<SpecificTypeMatcher>(LogicalType::INTEGER);
     matcher->matchers.push_back(std::move(rhs_matcher));
 
     return matcher;

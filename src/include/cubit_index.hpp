@@ -35,6 +35,10 @@ public:
 
     CUBITIndexType index;
 
+	unordered_map<string, uint32_t> string_to_code;
+	vector<string> code_to_string;
+	uint32_t next_string_code = 1;
+
 	unique_ptr<IndexScanState> InitializeScan(Expression *expr, idx_t limit, ClientContext &context);
 	idx_t Scan(IndexScanState &state, Vector &row_ids);
 
