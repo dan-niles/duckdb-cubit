@@ -6,6 +6,10 @@ This extension, CUBIT, allows you to create concurrently updatable bitmap indice
 
 ### Build steps
 
+Prerequisites:
+- [ccache](https://ccache.dev/)
+- [ninja](https://ninja-build.org/)
+
 Clone the repo:
 ```sh
 git clone --recurse-submodules https://github.com/dan-niles/duckdb-cubit.git
@@ -47,35 +51,26 @@ D select cubit_query('evaluate 1') as result;
 └───────────────┘
 ```
 
-This is used just for testing & debugging the functionality of the index. Refer to the section below for using CUBIT with an actual table.
+This is used just for testing & debugging the functionality of the index. Refer to the section below for using CUBIT with an actual table. Check `src/cubit_bridge.cpp` for the available options.
 
 ### Using CUBIT in a table
 
+Initializing CUBIT on an `INTEGER` column:
 ```sql
 CREATE TABLE t(i INTEGER);
-
-INSERT INTO t VALUES (1), (2), (3), (4), (5);
-
-CREATE INDEX cubit_idx ON t USING CUBIT(i);
+INSERT INTO t VALUES (1), (1), (2), (2), (3);
+CREATE INDEX cubit_idx_int ON t USING CUBIT(i);
+SELECT rowid, i FROM t WHERE i=2;
+DELETE FROM t WHERE i=2;
 ```
 
+Initializing CUBIT on a `VARCHAR` column:
 ```sql
-EXPLAIN SELECT * FROM t WHERE i = 3;
-```
-
-```sql
-SELECT * FROM duckdb_indexes WHERE table_name = 't';
-```
-
-```sql
-DELETE FROM t WHERE i = 2;
-INSERT INTO t VALUES (6);
-
--- See if index still works
-SELECT rowid, i FROM t WHERE i = 6;
-
--- Drop the index
-DROP INDEX cubit_idx;
+CREATE TABLE v (id INTEGER, j VARCHAR);
+INSERT INTO v VALUES (1, 'alice'), (2, 'bob'), (3, 'carol'), (4, 'carol'), (5, 'bob');
+CREATE INDEX cubit_idx_varchar ON v USING CUBIT(j);
+SELECT * FROM v WHERE j = 'bob';
+DELETE FROM v WHERE j = 'bob';
 ```
 
 ## Running the tests
