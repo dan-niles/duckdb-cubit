@@ -1,5 +1,6 @@
 #include "cubit_index.hpp"
 #include "cubit_index_physical_create.hpp"
+#include "cubit_thread_utils.hpp"
 
 #include "cubit/table_lf.h"
 
@@ -176,7 +177,7 @@ TaskExecutionResult ExecuteTask(TaskExecutionMode mode) override {
 				}
 
 				const auto value = static_cast<uint32_t>(data_ptr[col_idx]);
-				const int result = index->append(thread_id, value);
+				const int result = index->append(GetThreadID(), value);
 				if (result != 0) {
 					executor.PushError(ErrorData("Error in CUBIT index construction"));
 					return TaskExecutionResult::TASK_ERROR;
@@ -208,7 +209,7 @@ TaskExecutionResult ExecuteTask(TaskExecutionMode mode) override {
 					gstate.global_index->code_to_string.push_back(str_value);
 				}
 
-				const int result = index->append(thread_id, encoded_value);
+				const int result = index->append(GetThreadID(), encoded_value);
 				if (result != 0) {
 					executor.PushError(ErrorData("Error in CUBIT index construction"));
 					return TaskExecutionResult::TASK_ERROR;

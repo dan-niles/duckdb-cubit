@@ -1,6 +1,7 @@
 #include "cubit.hpp"
 #include "cubit_index.hpp"
 #include "cubit_bridge.hpp"
+#include "cubit_thread_utils.hpp"
 
 #include "cubit/table_lf.h"
 
@@ -118,8 +119,7 @@ unique_ptr<IndexScanState> CUBITIndex::InitializeScan(Expression *expr, idx_t li
 
 		if (!val.IsNull()) {
 			state->search_val = val.GetValue<uint32_t>();
-			int tid = 0;
-			state->matched_rows = index->query(tid, state->search_val);
+			state->matched_rows = index->query(GetThreadID(), state->search_val);
 			state->total_rows = state->matched_rows.size();
 		}
 	} else if (expr->type == ExpressionType::COMPARE_EQUAL) {
@@ -129,8 +129,7 @@ unique_ptr<IndexScanState> CUBITIndex::InitializeScan(Expression *expr, idx_t li
 			Value val = ExpressionExecutor::EvaluateScalar(context, *comp.right);
 			if (!val.IsNull()) {
 				state->search_val = val.GetValue<uint32_t>();
-				int tid = 0;
-				state->matched_rows = index->query(tid, state->search_val);
+				state->matched_rows = index->query(GetThreadID(), state->search_val);
 				state->total_rows = state->matched_rows.size();
 			}
 		}
@@ -167,8 +166,6 @@ ErrorData CUBITIndex::Insert(IndexLock &lock, DataChunk &input, Vector &rowid_ve
 	auto &col_type = col_vec.GetType();
 	D_ASSERT(col_type.id() == LogicalTypeId::INTEGER || col_type.id() == LogicalTypeId::VARCHAR);
 
-	auto tid = 0; // single-threaded for now
-
 	UnifiedVectorFormat format;
 	col_vec.ToUnifiedFormat(input.size(), format);
 
@@ -200,7 +197,7 @@ ErrorData CUBITIndex::Insert(IndexLock &lock, DataChunk &input, Vector &rowid_ve
 			throw InternalException("Unsupported column type in CUBITIndex::Insert");
 		}
 
-		auto result = index->append(tid, encoded_value);
+		auto result = index->append(GetThreadID(), encoded_value);
 		if (result != 0) {
 			return ErrorData{ExceptionType::INDEX, "CUBIT Insert failed"};
 		}
@@ -217,14 +214,12 @@ void CUBITIndex::Delete(IndexLock &lock, DataChunk &input, Vector &rowid_vec) {
 	rowid_vec.Flatten(count);
 	auto row_id_data = FlatVector::GetData<row_t>(rowid_vec);
 
-	auto tid = 0; // Single-threaded for now
-
 	// For deleting from the index, we need an exclusive lock
 	// auto _lock = rwlock.GetExclusiveLock();
 
 	for (idx_t i = 0; i < count; i++) {
 		auto row_id = static_cast<uint64_t>(row_id_data[i]);
-		auto result = index->remove(tid, row_id);
+		auto result = index->remove(GetThreadID(), row_id);
 		if (result != 0) {
 			// Optional: handle failed removal
 			throw InternalException("CUBITIndex::Delete failed to remove row ID: " + std::to_string(row_id));

@@ -33,6 +33,7 @@ set(EXTENSION_SOURCES
     src/cubit_index_physical_create.cpp
     src/cubit_index_scan.cpp
     src/cubit_optimize_scan.cpp
+    src/cubit_thread_utils.cpp
 )
 
 # --- Use DuckDB-provided macros to build the extension
