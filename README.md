@@ -73,6 +73,22 @@ SELECT * FROM v WHERE j = 'bob';
 DELETE FROM v WHERE j = 'bob';
 ```
 
+Explain a SQL statement:
+```sql
+EXPLAIN SELECT rowid, i FROM t WHERE i = 3;
+```
+
+Show all indexes initialized for a particular table:
+```sql
+SELECT * FROM duckdb_indexes WHERE table_name = 't';
+```
+
+Drop the indexes:
+```sql
+DROP INDEX cubit_idx_int;
+DROP INDEX cubit_idx_varchar;
+```
+
 ## Running the tests
 Different tests can be created for DuckDB extensions. The primary way of testing DuckDB extensions should be the SQL tests in `./test/sql`. These SQL tests can be run using:
 ```sh
