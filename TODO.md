@@ -6,7 +6,12 @@
 4. Support BETWEEN and <,>,<=,>= operators?
 5. Do benchmarks
 6. Find a way to initialize with dynamic no. of rows, cardinality
-7. Add support for indexing string columns
-    - Internally hash or dictionary-encode string values to integers in `CUBITIndex::Append` and `CUBITIndex::Scan`.
-    - Store a map like unordered_map<string, uint32_t> for category-to-index.
-    - During scans, map the filter string to the integer key before querying.
+7. ~~Add support for indexing string columns~~
+
+# Already Implemented
+
+1. Query method for CUBIT to get row_ids (evaluate() only returns count of matches)
+2. Initialize CUBIT with CREATE INDEX
+3. INSERT, DELETE support for INTEGER columns
+4. Search index when SELECT expressions are called with WHERE clause
+5. Added support for indexing VARCHAR columns in CUBIT (encode values to int)
