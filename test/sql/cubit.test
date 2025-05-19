@@ -1,4 +1,4 @@
-# name: cubit_index.test
+# name: cubit.test
 # description: Test CUBIT index on INTEGER and VARCHAR columns
 # group: [cubit]
 
