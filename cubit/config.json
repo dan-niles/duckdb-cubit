@@ -1,6 +1,6 @@
 {
   "n_workers": 3,
-  "g_cardinality": 5,
+  "g_cardinality": 10,
   "DATA_PATH": "/home/danniles/cubit/data",
   "INDEX_PATH": "/home/danniles/cubit/index",
   "n_rows": 1,
