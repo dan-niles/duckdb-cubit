@@ -144,6 +144,7 @@ public:
     uint64_t g_number_of_rows;
 
     Cubit(Table_config *);
+    ~Cubit();
 
     int append(int, int, uint64_t row_id = UINT64_MAX);
     int remove(int, uint64_t);

@@ -1478,16 +1478,51 @@ int Cubit::__init_append(int tid, int rowID, int val)
 } 
 
 void Cubit::reset() {
+    // Free bitmaps safely using RCU
     for (int i = 0; i < num_bitmaps; ++i) {
         if (bitmaps[i]) {
-            delete bitmaps[i]->btv;
-            delete bitmaps[i]->seg_btv;
-            delete bitmaps[i];
+            call_rcu(&bitmaps[i]->head, free_bitmap_cb);
         }
     }
 
+    // Delete bitmap array
+    delete[] bitmaps;
+    bitmaps = nullptr;
+    num_bitmaps = 0;
+
+    // Reset row counter
     g_number_of_rows = 0;
 
+    // Free transaction queue
+    if (trans_queue) {
+        delete trans_queue;
+        trans_queue = nullptr;
+    }
+
+    // Free merge request queues (if allocated)
+    if (merge_req_queues) {
+        for (int i = 0; i < num_bitmaps; ++i) {
+            if (!merge_req_queues[i].empty()) {
+                while (!merge_req_queues[i].empty()) {
+                    auto req = merge_req_queues[i].front();
+                    merge_req_queues[i].pop();
+                    delete req; // free merge_req*
+                }
+            }
+        }
+        delete[] merge_req_queues;
+        merge_req_queues = nullptr;
+    }
+
+    // Free associated locks
+    if (lk_merge_req_queues) {
+        delete[] lk_merge_req_queues;
+        lk_merge_req_queues = nullptr;
+    }
+}
+
+Cubit::~Cubit() {
+    reset(); // safely releases all memory
 }
 
 int Cubit::size()
