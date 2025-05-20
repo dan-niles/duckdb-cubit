@@ -15,3 +15,4 @@
 3. INSERT, DELETE support for INTEGER columns
 4. Search index when SELECT expressions are called with WHERE clause
 5. Added support for indexing VARCHAR columns in CUBIT (encode values to int)
+6. Reset method to deallocate the index when CommitDrop is invoked
