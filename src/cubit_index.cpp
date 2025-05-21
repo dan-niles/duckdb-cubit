@@ -24,7 +24,7 @@
 namespace duckdb {
 
 Table_config* GenerateTableConfig() {
-	std::ifstream config_file("/home/danniles/Projects/duckdb-cubit/cubit/config.json");
+	std::ifstream config_file("./cubit/config.json");
 	nlohmann::json j;
     config_file >> j;
 
