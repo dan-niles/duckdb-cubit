@@ -9,6 +9,19 @@ This extension, CUBIT, allows you to create concurrently updatable bitmap indice
 Prerequisites:
 - [ccache](https://ccache.dev/)
 - [ninja](https://ninja-build.org/)
+- [Boost](https://www.boost.org/) (filesystem, system, program_options)
+- [Userspace RCU](https://liburcu.org/) (liburcu)
+
+```sh
+sudo apt update
+sudo apt install -y \
+    libboost-filesystem-dev \
+    libboost-program-options-dev \
+    libboost-system-dev \
+    liburcu-dev \
+    cmake \
+    build-essential
+```
 
 Clone the repo:
 ```sh
