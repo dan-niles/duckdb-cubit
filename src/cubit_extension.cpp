@@ -3,6 +3,7 @@
 
 #include "cubit_extension.hpp"
 #include "cubit_bridge.hpp"
+#include "cubit_index_count.hpp" // For CUBITIndexCountFunction
 
 #include "duckdb.hpp"
 #include "duckdb/common/exception.hpp"

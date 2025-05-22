@@ -5,12 +5,15 @@
 #include "duckdb/optimizer/remove_unused_columns.hpp"
 #include "duckdb/planner/expression/bound_constant_expression.hpp"
 #include "duckdb/planner/expression/bound_comparison_expression.hpp"
+#include "duckdb/planner/expression/bound_aggregate_expression.hpp"
 #include "duckdb/planner/expression_iterator.hpp"
 #include "duckdb/planner/operator/logical_get.hpp"
 #include "duckdb/planner/operator/logical_projection.hpp"
 #include "duckdb/planner/operator/logical_top_n.hpp"
 #include "duckdb/planner/operator/logical_filter.hpp"
+#include "duckdb/planner/operator/logical_aggregate.hpp"
 #include "duckdb/storage/data_table.hpp"
+#include "cubit_index_count.hpp" // For CUBITIndexCountFunction and CUBITIndexCountBindData
 #include "duckdb/planner/table_filter.hpp"
 #include "duckdb/planner/filter/constant_filter.hpp"
 
@@ -160,7 +163,90 @@ public:
         } else if (plan->type == LogicalOperatorType::LOGICAL_GET) {
             auto &get = plan->Cast<LogicalGet>();
             return TryOptimizePushedDownFilter(context, plan, get);
+        } else if (plan->type == LogicalOperatorType::LOGICAL_AGGREGATE_AND_GROUP_BY) {
+            auto &aggregate = plan->Cast<LogicalAggregate>();
+            // Check for count(column)
+            if (aggregate.groups.empty() && aggregate.expressions.size() == 1) {
+                auto &agg_expr = aggregate.expressions[0]->Cast<BoundAggregateExpression>();
+                if (agg_expr.function.name == "count" && agg_expr.children.size() == 1 &&
+                    agg_expr.children[0]->expression_class == ExpressionClass::BOUND_COLUMN_REF) {
+
+                    auto &count_col_ref = agg_expr.children[0]->Cast<BoundColumnRefExpression>();
+                    idx_t count_column_idx = count_col_ref.binding.column_index;
+
+                    // Check for filter child operator: Filter -> Get
+                    if (aggregate.children.size() == 1 && aggregate.children[0]->type == LogicalOperatorType::LOGICAL_FILTER) {
+                        auto &filter = aggregate.children[0]->Cast<LogicalFilter>();
+                        if (filter.children.size() == 1 && filter.children[0]->type == LogicalOperatorType::LOGICAL_GET) {
+                            auto &get = filter.children[0]->Cast<LogicalGet>();
+                            if (get.function.name != "seq_scan") {
+                                return false;
+                            }
+                            auto &table = *get.GetTable();
+                            if (!table.IsDuckTable()) {
+                                return false;
+                            }
+                            auto &duck_table = table.Cast<DuckTableEntry>();
+                            auto &table_info = *table.GetStorage().GetDataTableInfo();
+
+                            // Check filter expressions: column = constant
+                            for (auto &expr : filter.expressions) {
+                                if (expr->type != ExpressionType::COMPARE_EQUAL) continue;
+                                auto &cmp = expr->Cast<BoundComparisonExpression>();
+
+                                if (cmp.left->type != ExpressionType::BOUND_COLUMN_REF ||
+                                    cmp.right->type != ExpressionType::VALUE_CONSTANT) continue;
+
+                                auto &filter_col_ref = cmp.left->Cast<BoundColumnRefExpression>();
+                                const Value &const_val = cmp.right->Cast<BoundConstantExpression>().value;
+                                idx_t filter_column_idx = filter_col_ref.binding.column_index;
+
+                                // Ensure count column is the same as filter column
+                                if (count_column_idx != filter_column_idx) {
+                                    continue;
+                                }
+
+                                // Check for CUBIT index
+                                unique_ptr<CUBITIndexScanBindData> index_bind_data =
+                                    TryCreateIndexBindData(context, duck_table, table_info, filter_column_idx, const_val);
+
+                                if (!index_bind_data) {
+                                    continue;
+                                }
+
+                                // All conditions met, rewrite the plan!
+                                // Create the specific bind data for the count operation
+                                auto count_bind_data = make_uniq<CUBITIndexCountBindData>(
+                                    duck_table,
+                                    index_bind_data->cubit_index, // Pass the CUBITIndex reference
+                                    index_bind_data->search_value_code // Pass the encoded search value
+                                );
+
+                                // Replace Get's function and bind_data
+                                get.function = CUBITIndexCountFunction::GetFunction();
+                                get.bind_data = std::move(count_bind_data);
+                                get.returned_types = {LogicalType::UBIGINT}; // Count returns a single UBIGINT
+
+                                // The aggregate operator itself will be replaced by a projection
+                                // The projection will select the result of the new CUBITIndexCountFunction
+                                // which is now effectively the output of the modified 'get' operator.
+
+                                // Create a new projection
+                                vector<unique_ptr<Expression>> select_list;
+                                select_list.push_back(make_uniq<BoundColumnRefExpression>(get.returned_types[0], ColumnBinding(get.table_index, 0)));
+
+                                auto projection = make_uniq<LogicalProjection>(aggregate.expressions[0]->alias, std::move(select_list));
+                                projection->AddChild(std::move(filter.children[0])); // child of filter is the modified get
+
+                                plan = std::move(projection);
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
         }
+
 
         return false;
     }
@@ -169,8 +255,11 @@ public:
 
 		auto ok = TryOptimize(context, plan);
 		// Recursively optimize the children
-		for (auto &child : plan->children) {
-			ok |= OptimizeChildren(context, child);
+		if (!ok) { // Only recurse if current node was not optimized, to allow parent to optimize first
+			for (auto &child : plan->children) {
+				ok |= OptimizeChildren(context, child);
+			}
+		}
 		}
 		return ok;
 	}
