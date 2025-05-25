@@ -94,6 +94,7 @@ CUBITIndex::CUBITIndex(const string &name, IndexConstraintType constraint_type, 
 
 	index_size = index->get_g_number_of_rows();
     function_matcher = MakeFunctionMatcher();
+	this->index_type = TYPE_NAME;
 }
 
 CUBITIndex::~CUBITIndex() = default;

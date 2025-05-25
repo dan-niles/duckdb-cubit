@@ -9,6 +9,7 @@ public:
 	static void Register(DatabaseInstance &db) {
 		RegisterIndex(db);
 		RegisterIndexScan(db);
+		RegisterScalarFunctions(db); 
 		// RegisterIndexPragmas(db);
 		// RegisterMacros(db);
 
@@ -22,6 +23,7 @@ public:
 private:
 	static void RegisterIndex(DatabaseInstance &db);
 	static void RegisterIndexScan(DatabaseInstance &db);
+	static void RegisterScalarFunctions(DatabaseInstance &db);
 	// static void RegisterMultiScan(DatabaseInstance &db);
 	// static void RegisterIndexPragmas(DatabaseInstance &db);
 	// static void RegisterMacros(DatabaseInstance &db);
