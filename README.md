@@ -1,6 +1,6 @@
 # CUBIT Extension for DucKDB
 
-This extension, CUBIT, allows you to create concurrently updatable bitmap indices in duckdb.
+This extension, allows you to create Concurrently Updatable Bitmap (CUBIT) indices in duckdb.
 
 ## Building
 
