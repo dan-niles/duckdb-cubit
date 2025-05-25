@@ -86,6 +86,11 @@ SELECT * FROM v WHERE j = 'bob';
 DELETE FROM v WHERE j = 'bob';
 ```
 
+Get count for a particular value:
+```sql
+SELECT cubit_count('t', 'i', 2); -- (table, column, value)
+```
+
 Explain a SQL statement:
 ```sql
 EXPLAIN SELECT rowid, i FROM t WHERE i = 3;
