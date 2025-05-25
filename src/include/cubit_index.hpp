@@ -55,6 +55,8 @@ public:
 	//! Insert a chunk of entries into the index
 	ErrorData Insert(IndexLock &lock, DataChunk &data, Vector &row_ids) override;
 
+	int64_t Count(uint32_t val);
+
     IndexStorageInfo GetStorageInfo(const case_insensitive_map_t<Value> &options, bool to_wal) override;
     idx_t GetInMemorySize(IndexLock &lock) override;
 

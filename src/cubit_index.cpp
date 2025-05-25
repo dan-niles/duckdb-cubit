@@ -230,6 +230,10 @@ void CUBITIndex::Delete(IndexLock &lock, DataChunk &input, Vector &rowid_vec) {
 	index_size = index->get_g_number_of_rows(); // If supported
 }
 
+int64_t CUBITIndex::Count(uint32_t val) {
+	return index->evaluate(GetThreadID(), val);
+}
+
 IndexStorageInfo CUBITIndex::GetStorageInfo(const case_insensitive_map_t<Value> &options, const bool to_wal) {
     IndexStorageInfo info;
     info.name = name;
