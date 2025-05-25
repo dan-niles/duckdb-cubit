@@ -1,0 +1,7 @@
+CREATE TABLE t(i INTEGER);
+CREATE INDEX cubit_idx_int ON t USING CUBIT(i);
+WITH data AS (
+SELECT 1 AS i
+FROM range(1000)
+)
+INSERT INTO t SELECT \* FROM data;
