@@ -20,7 +20,9 @@ sudo apt install -y \
     libboost-system-dev \
     liburcu-dev \
     cmake \
-    build-essential
+    build-essential \
+    ninja-build \
+    ccache
 ```
 
 Clone the repo:
