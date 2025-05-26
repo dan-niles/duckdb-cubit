@@ -1,8 +1,6 @@
 // src/cubit_scalar_functions.cpp
 #include "cubit.hpp"          // For CUBITModule (if RegisterScalarFunctions is a member)
 #include "cubit_index.hpp"    // For CUBITIndex
-#include <chrono> 
-#include <iomanip>
 
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
@@ -60,15 +58,7 @@ static void CubitCountExplicitExec(DataChunk &args, ExpressionState &state, Vect
         throw InternalException("cubit_count_explicit: Unexpected type in execution. This should have been caught during binding.");
     }
 
-    auto start = std::chrono::high_resolution_clock::now();
-
     int count = bind_data.index.Count(encoded_value);
-
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(end - start).count();
-    std::cerr << std::fixed << std::setprecision(3)
-            << "Count query on CUBIT took "
-            << duration << " ms. Result: " << count << std::endl;
 
     result.Reference(Value::BIGINT(count));
 }
