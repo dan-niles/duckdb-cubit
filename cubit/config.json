@@ -1,5 +1,5 @@
 {
-  "n_workers": 4,
+  "n_workers": 12,
   "g_cardinality": 10,
   "DATA_PATH": "/home/danniles/cubit/data",
   "INDEX_PATH": "/home/danniles/cubit/index",
@@ -12,8 +12,8 @@
   "show_memory": false,
   "on_disk": false,
   "approach": "cubit-lf",
-  "nThreads_for_getval": 4,
-  "time_out": 100000,
+  "nThreads_for_getval": 12,
+  "time_out": 1000,
   "n_range": 1,
   "range_algo": "naive",
   "showEB": false,
